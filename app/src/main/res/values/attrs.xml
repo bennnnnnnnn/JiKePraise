@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="JiKePraiseView">
+        <!--当前数值,默认0-->
+        <attr name="number" format="integer"/>
+        <!--字体大小,决定控件高度以及图形大小,默认14sp-->
+        <attr name="textSize" format="dimension"/>
+        <attr name="textStrokeWidth" format="dimension"/>
+        <!--数字颜色,默认#888888-->
+        <attr name="textColor" format="color"/>
+        <!--图形与数字间的距离,默认3dp-->
+        <attr name="textToPic" format="dimension"/>
+        <!--动画时间,默认300-->
+        <attr name="duration" format="integer"/>
+        <attr name="active" format="boolean"/>
+    </declare-styleable>
+</resources>
