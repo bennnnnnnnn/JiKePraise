@@ -4,7 +4,7 @@
 
 #### 效果图
 
-![](images/demo.gif)
+![image](https://github.com/bennnnnnnnn/JiKePraise/blob/master/image/demo.gif)
 
 #### TODO
 - 代码各个值的命名（暂时命名不太准确），代码格式（目前有点儿乱）
