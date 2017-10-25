@@ -19,6 +19,7 @@ import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
 
 import com.example.ben.jikepraise.R;
 
@@ -32,11 +33,13 @@ import com.example.ben.jikepraise.R;
 public class JiKePraiseView extends View {
     private static final String TAG = "JiKePraiseView";
     private Paint picPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private TextPaint sameTextPaint, newTextPaint, oldTextPaint;
     @ColorInt
     private int textColor;
     private int textSize;
     private int textStrokeWidth;
+    private int circleStrokeWidth;
     private float textMoveHeight;
     private float textWidth;
     private float picDevHeight;
@@ -45,8 +48,10 @@ public class JiKePraiseView extends View {
     private float numAnimateScale = 0;
     private float picAnimateScale = 0;
     private float shineAnimateScale = 0;
+    private float circleAnimateScale = 0;
+    private float circleAlphaScale = 0;
     private int number = 120;
-    private int duration = 500;
+    private int duration = 300;
     private String oldNumStr;
     private String newNumStr;
     private String sameToDrawNumStr = "";
@@ -69,6 +74,9 @@ public class JiKePraiseView extends View {
     float praiseY;
     float shineX;
     float shineY;
+    float circleX;
+    float circleY;
+    float radius;
 
     {
         praiseActiveBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_praise_active);
@@ -98,20 +106,26 @@ public class JiKePraiseView extends View {
             textStrokeWidth = dp2px(2);
             textColor = Color.parseColor("#bdbdbd");
             textToPic = dp2px(3);
+            circleStrokeWidth = dp2px(2);
             active = false;
         } else {
             TypedArray ta = getContext().obtainStyledAttributes(attrs, R.styleable.JiKePraiseView);
             try {
                 number = ta.getInt(R.styleable.JiKePraiseView_number, 0);
-                textSize = ta.getDimensionPixelSize(R.styleable.JiKePraiseView_textSize, dp2px(14));
-                textStrokeWidth = ta.getDimensionPixelSize(R.styleable.JiKePraiseView_textStrokeWidth, dp2px(2));
+                textSize = dp2px(ta.getDimensionPixelSize(R.styleable.JiKePraiseView_textSize, 14));
+                textStrokeWidth = dp2px(ta.getDimensionPixelSize(R.styleable.JiKePraiseView_textStrokeWidth, 2));
                 textColor = ta.getColor(R.styleable.JiKePraiseView_textColor, Color.parseColor("#bdbdbd"));
-                textToPic = ta.getDimensionPixelSize(R.styleable.JiKePraiseView_textToPic, dp2px(3));
+                textToPic = dp2px(ta.getDimensionPixelSize(R.styleable.JiKePraiseView_textToPic, 3));
+                circleStrokeWidth = dp2px(ta.getDimensionPixelSize(R.styleable.JiKePraiseView_circleStrokeWidth, 2));
                 active = ta.getBoolean(R.styleable.JiKePraiseView_active, false);
             } finally {
                 ta.recycle();
             }
         }
+
+        circlePaint.setColor(Color.parseColor("#f9c8bf"));
+        circlePaint.setStrokeWidth(circleStrokeWidth);
+        circlePaint.setStyle(Paint.Style.STROKE);
 
         sameTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         sameTextPaint.setColor(textColor);
@@ -156,7 +170,7 @@ public class JiKePraiseView extends View {
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private void initTextpaints() {
+    private void initTextPaints() {
         newTextPaint.setTextSize(textSize);
         newTextPaint.setAlpha((int) (255 * numAnimateScale)); //[0..255]
         if (isPlusNum) {
@@ -174,27 +188,33 @@ public class JiKePraiseView extends View {
         measureTextWidth();
     }
 
-    private void
-    drawNumber(Canvas canvas) {
-        initTextpaints();
+    private void initCirclePaint() {
+        circlePaint.setAlpha((int) (255 * circleAlphaScale));
+    }
+
+    private void drawNumber(Canvas canvas) {
+        initTextPaints();
+        float sameX = radius * 2 + circleStrokeWidth;
+        float difX = sameX + sameNumWidth;
         if (isInitial) {
-            canvas.drawText(String.valueOf(number), praiseActiveBitmap.getWidth() + textToPic, textBaseLineHeight + textMoveHeight, sameTextPaint);
+            canvas.drawText(String.valueOf(number), sameX, textBaseLineHeight + textMoveHeight, sameTextPaint);
             isInitial = false;
         } else {
-            canvas.drawText(sameToDrawNumStr, praiseActiveBitmap.getWidth() + textToPic, textBaseLineHeight + textMoveHeight, sameTextPaint);
-            canvas.drawText(sameToDrawNumStr, praiseActiveBitmap.getWidth() + textToPic, textBaseLineHeight + textMoveHeight, sameTextPaint);
+            canvas.drawText(sameToDrawNumStr, sameX, textBaseLineHeight + textMoveHeight, sameTextPaint);
+            canvas.drawText(sameToDrawNumStr, sameX, textBaseLineHeight + textMoveHeight, sameTextPaint);
             if (isPlusNum) {
-                canvas.drawText(oldToDrawNumStr, praiseActiveBitmap.getWidth() + textToPic + sameNumWidth, textBaseLineHeight + textMoveHeight * (1 - numAnimateScale), oldTextPaint);
-                canvas.drawText(newToDrawNumStr, praiseActiveBitmap.getWidth() + textToPic + sameNumWidth, textBaseLineHeight + textMoveHeight * (2 - numAnimateScale), newTextPaint);
+                canvas.drawText(oldToDrawNumStr, difX, textBaseLineHeight + textMoveHeight * (1 - numAnimateScale), oldTextPaint);
+                canvas.drawText(newToDrawNumStr, difX, textBaseLineHeight + textMoveHeight * (2 - numAnimateScale), newTextPaint);
             } else {
-                canvas.drawText(oldToDrawNumStr, praiseActiveBitmap.getWidth() + textToPic + sameNumWidth, textBaseLineHeight + textMoveHeight * (1 + numAnimateScale), oldTextPaint);
-                canvas.drawText(newToDrawNumStr, praiseActiveBitmap.getWidth() + textToPic + sameNumWidth, textBaseLineHeight + textMoveHeight * numAnimateScale, newTextPaint);
+                canvas.drawText(oldToDrawNumStr, difX, textBaseLineHeight + textMoveHeight * (1 + numAnimateScale), oldTextPaint);
+                canvas.drawText(newToDrawNumStr, difX, textBaseLineHeight + textMoveHeight * numAnimateScale, newTextPaint);
             }
         }
     }
 
     private void drawPic(Canvas canvas) {
         measurePicPointXY();
+        initCirclePaint();
         if (isInitial) {
             if (active) {
                 canvas.save();
@@ -222,6 +242,9 @@ public class JiKePraiseView extends View {
                 canvas.translate(shineX, shineY);
                 canvas.scale((0.6f + 0.4f * shineAnimateScale), (0.6f + 0.4f * shineAnimateScale));
                 canvas.drawBitmap(praiseShiningBitmap, 0, 0, picPaint);
+                canvas.restore();
+                canvas.save();
+                canvas.drawCircle(circleX, circleY, radius * circleAnimateScale, circlePaint);
                 canvas.restore();
             } else {
                 canvas.save();
@@ -266,7 +289,23 @@ public class JiKePraiseView extends View {
             picAnimator.setDuration(duration);
             picAnimator.start();
         }
+    }
 
+    private void slideCircle() {
+        if (isPlusNum) {
+            Keyframe keyframe1 = Keyframe.ofFloat(0, 0);
+            Keyframe keyframe2 = Keyframe.ofFloat(0.9f, 1);
+            Keyframe keyframe3 = Keyframe.ofFloat(1, 0.9f);
+            PropertyValuesHolder holder1 = PropertyValuesHolder.ofKeyframe("circleAnimateScale", keyframe1, keyframe2, keyframe3);
+            Keyframe keyframe4 = Keyframe.ofFloat(0, 0);
+            Keyframe keyframe5 = Keyframe.ofFloat(0.9f, 1);
+            Keyframe keyframe6 = Keyframe.ofFloat(1, 0);
+            PropertyValuesHolder holder2 = PropertyValuesHolder.ofKeyframe("circleAlphaScale", keyframe4, keyframe5, keyframe6);
+            ObjectAnimator circleAnimator = ObjectAnimator.ofPropertyValuesHolder(this, holder1, holder2);
+            circleAnimator.setDuration(duration);
+            circleAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+            circleAnimator.start();
+        }
     }
 
     private class BitmapEvaluator implements TypeEvaluator<Bitmap> {
@@ -283,8 +322,13 @@ public class JiKePraiseView extends View {
 
     private void slideShine() {
         if (isPlusNum) {
-            ObjectAnimator shineAnimator = ObjectAnimator.ofFloat(this, "shineAnimateScale", 0f, 1f);
-            shineAnimator.setDuration((long) (0.6 * duration));
+            Keyframe keyframe1 = Keyframe.ofFloat(0, 0);
+            Keyframe keyframe2 = Keyframe.ofFloat(0.6f, 1.25f);
+            Keyframe keyframe3 = Keyframe.ofFloat(0.8f, 1);
+            Keyframe keyframe4 = Keyframe.ofFloat(1, 1);
+            PropertyValuesHolder holder = PropertyValuesHolder.ofKeyframe("shineAnimateScale", keyframe1, keyframe2, keyframe3, keyframe4);
+            ObjectAnimator shineAnimator = ObjectAnimator.ofPropertyValuesHolder(this, holder);
+            shineAnimator.setDuration(duration);
             shineAnimator.start();
         } else {
             ObjectAnimator shineAnimator = ObjectAnimator.ofFloat(this, "shineAnimateScale", 1f, 0);
@@ -327,6 +371,7 @@ public class JiKePraiseView extends View {
         slideText();
         slidePic();
         slideShine();
+        slideCircle();
     }
 
     private void setDrawNumStr() {
@@ -383,6 +428,21 @@ public class JiKePraiseView extends View {
         this.shineAnimateScale = shineAnimateScale;
     }
 
+    public float getCircleAnimateScale() {
+        return circleAnimateScale;
+    }
+
+    public void setCircleAnimateScale(float circleAnimateScale) {
+        this.circleAnimateScale = circleAnimateScale;
+    }
+
+    public float getCircleAlphaScale() {
+        return circleAlphaScale;
+    }
+
+    public void setCircleAlphaScale(float circleAlphaScale) {
+        this.circleAlphaScale = circleAlphaScale;
+    }
 
     public int getNumber() {
         return number;
@@ -437,22 +497,31 @@ public class JiKePraiseView extends View {
         shineWidth = praiseShiningBitmap.getWidth();
         shineHeight = praiseShiningBitmap.getHeight();
         picDevHeight = textBaseLineHeight + 0.6f * textMoveHeight - shineHeight / 2 - praiseHeight / 2;
+        radius = 42;
+        circleX = radius + circleStrokeWidth / 2;
+        circleY = picDevHeight + shineHeight / 2 + praiseHeight / 2;
+
+
+        float y = 0.08f * circleY;
+        float x = 1f * (circleX - (praiseWidth / 2));
+
         if (isInitial) {
-            praiseX = 0;
-            praiseY = picDevHeight + shineHeight / 2;
-            shineX = (praiseWidth - shineWidth) / 2;
-            shineY = picDevHeight;
+            praiseX = 0 + x;
+            praiseY = picDevHeight + shineHeight / 2 + y;
+            shineX = (praiseWidth - shineWidth) / 2 + x;
+            shineY = picDevHeight + y;
         } else {
-            praiseX = praiseWidth / 2 - praiseWidth / 2 * picAnimateScale;
-            praiseY = picDevHeight + praiseHeight / 2 + shineHeight / 2 - praiseHeight / 2 * picAnimateScale;
+            praiseX = praiseWidth / 2 - praiseWidth / 2 * picAnimateScale + x;
+            praiseY = picDevHeight + praiseHeight / 2 + shineHeight / 2 - praiseHeight / 2 * picAnimateScale + y;
             if (isPlusNum) {
-                shineX = praiseWidth / 2 - shineWidth / 2 * (0.6f + 0.4f * shineAnimateScale);
-                shineY = picDevHeight + shineHeight / 2 - shineHeight / 2 * (0.6f + 0.4f * shineAnimateScale);
+                shineX = praiseWidth / 2 - shineWidth / 2 * (0.6f + 0.4f * shineAnimateScale) + x;
+                shineY = picDevHeight + shineHeight / 2 - shineHeight / 2 * (0.6f + 0.4f * shineAnimateScale) + y;
             } else {
-                shineX = praiseWidth / 2 - shineWidth / 2 * (0.9f + 0.1f * shineAnimateScale);
-                shineY = picDevHeight + shineHeight / 2 - shineHeight / 2 * (0.9f + 0.1f * shineAnimateScale);
+                shineX = praiseWidth / 2 - shineWidth / 2 * (0.9f + 0.1f * shineAnimateScale) + x;
+                shineY = picDevHeight + shineHeight / 2 - shineHeight / 2 * (0.9f + 0.1f * shineAnimateScale) + y;
             }
         }
+
     }
 
     private int dp2px(int dp) {
